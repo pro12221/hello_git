@@ -1,0 +1,44 @@
+name: Deploy ai_chat_deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted,AI-Web-Stag] 
+
+    steps:
+      - name: Clean workspace
+        run: |
+          sudo rm -rf /home/ubuntu/runner/actions-runner/_work/ai_chatbot_frontend/ai_chatbot_frontend/.next
+          sudo rm -rf /home/ubuntu/runner/actions-runner/_work/ai_chatbot_frontend/ai_chatbot_frontend/*
+
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo pnpm install
+
+      - name: Build project
+        run: sudo pnpm run build
+
+      - name: Create target directory in /opt
+        run: sudo mkdir -p /opt/ai_chatbot_front 
+
+      - name: Copy files to /opt/ai_chatbot_front
+        run: |
+          sudo cp -R .next /opt/ai_chatbot_front/
+          sudo cp -R public /opt/ai_chatbot_front/
+          sudo cp package.json /opt/ai_chatbot_front/
+          sudo cp pnpm-lock.yaml /opt/ai_chatbot_front/
+          sudo cp next.config.ts /opt/ai_chatbot_front/
+        
+
+      - name: Start application in /opt/ai_chatbot_front
+        run: |
+          sudo chown -R ubuntu:ubuntu /opt/ai_chatbot_front
+          cd /opt/ai_chatbot_front
+          sudo pnpm install
+          sudo kill $(sudo netstat -plnt | grep 3000 | awk '{print $7}' | cut -d'/' -f1) || true
+          sudo nohup pnpm run start &
